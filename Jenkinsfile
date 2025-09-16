@@ -19,25 +19,25 @@ pipeline {
             }
         }
 
-    stage('Deploy') {
-        steps {
-            echo 'Deploying JAR and run script'
-            sh """
-                ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} 'mkdir -p ${REMOTE_DIR} && chmod 755 ${REMOTE_DIR}'
-                scp -i ${SSH_KEY} ${BUILD_DIR}/*.jar ${RUN_SCRIPT} ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/
-            """
+        stage('Deploy') {
+            steps {
+                echo 'Deploying JAR and run script'
+                sh """
+                    ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} 'mkdir -p ${REMOTE_DIR} && chmod 755 ${REMOTE_DIR}'
+                    scp -i ${SSH_KEY} ${BUILD_DIR}/*.jar ${RUN_SCRIPT} ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/
+                """
+            }
+        }
+
+        stage('Run') {
+            steps {
+                echo 'Running the application'
+                sh """
+                    ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} 'chmod +x ${REMOTE_DIR}/${RUN_SCRIPT} && bash ${REMOTE_DIR}/${RUN_SCRIPT}'
+                """
+            }
         }
     }
-
-    stage('Run') {
-        steps {
-            echo 'Running the application'
-            sh """
-                ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} 'chmod +x ${REMOTE_DIR}/${RUN_SCRIPT} && bash ${REMOTE_DIR}/${RUN_SCRIPT}'
-            """
-        }
-    }
-
 
     post {
         success { echo 'Build & Deploy SUCCESS!' }
