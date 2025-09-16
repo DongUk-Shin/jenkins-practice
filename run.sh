@@ -1,19 +1,29 @@
 #!/bin/bash
 
+# 배포 디렉터리
 DEPLOY_DIR="/root/deploy"
-JAR_NAME="jenkins-practice-0.0.1-SNAPSHOT.jar"
-PORT=8081
-LOG_FILE="$DEPLOY_DIR/app.log"
+LOG_FILE="app.log"
 
-cd $DEPLOY_DIR
+cd "$DEPLOY_DIR" || { echo "Cannot cd to $DEPLOY_DIR"; exit 1; }
 
-# 이전 실행 중인 JAR 프로세스 종료 (배포 대상 JAR만)
-CURRENT_PID=$(pgrep -f "$JAR_NAME") || true
-if [ ! -z "$CURRENT_PID" ]; then
-    echo "Stopping existing process $CURRENT_PID"
-    kill -15 $CURRENT_PID || true
+# 최신 JAR 파일 찾기 (*.jar)
+JAR_FILE=$(ls -t *.jar 2>/dev/null | head -n 1)
+
+if [ -z "$JAR_FILE" ]; then
+    echo "No JAR file found in $DEPLOY_DIR"
+    exit 1
 fi
 
-# JAR 실행 (백그라운드, SSH 종료에도 유지)
-nohup java -jar $JAR_NAME --server.port=$PORT > $LOG_FILE 2>&1 &
-echo "Application started on port $PORT"
+# 이전 프로세스 종료
+PID=$(pgrep -f "$JAR_FILE")
+if [ ! -z "$PID" ]; then
+    echo "Stopping existing process (PID: $PID)"
+    kill -9 "$PID"
+    sleep 2
+fi
+
+# JAR 실행
+echo "Starting $JAR_FILE..."
+nohup java -jar "$JAR_FILE" > "$LOG_FILE" 2>&1 &
+
+echo "$JAR_FILE started. Logs: $DEPLOY_DIR/$LOG_FILE"

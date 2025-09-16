@@ -2,11 +2,11 @@ pipeline {
     agent any
 
     environment {
-        REMOTE_HOST = '172.18.121.6'          // 타겟 서버 IP
-        REMOTE_USER = 'root'                  // SSH 접속 사용자
-        REMOTE_DIR  = '/root/deploy'          // 배포 디렉터리
-        SSH_KEY     = '/var/lib/jenkins/.ssh/id_rsa'  // Jenkins 서버 SSH 키
-        JAR_FILE    = 'build/libs/jenkins-practice-0.0.1-SNAPSHOT.jar'
+        REMOTE_HOST = '172.18.121.6'
+        REMOTE_USER = 'root'
+        REMOTE_DIR  = '/root/deploy'
+        SSH_KEY     = '/var/lib/jenkins/.ssh/id_rsa'
+        BUILD_DIR   = 'build/libs'
         RUN_SCRIPT  = 'run.sh'
     }
 
@@ -20,16 +20,32 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                echo 'Deploying JAR and run script to remote server'
+                echo 'Deploying latest JAR and run script'
 
-                // 원격 디렉터리 생성
-                sh "ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} 'mkdir -p ${REMOTE_DIR} && chmod 755 ${REMOTE_DIR}'"
+                sh """
+                    # 원격 디렉터리 생성
+                    ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} 'mkdir -p ${REMOTE_DIR} && chmod 755 ${REMOTE_DIR}'
 
-                // JAR + run.sh 전송
-                sh "scp -o StrictHostKeyChecking=no -i ${SSH_KEY} ${JAR_FILE} ${RUN_SCRIPT} ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
+                    # 최신 JAR 파일 찾기
+                    LATEST_JAR=\$(ls -t ${BUILD_DIR}/*.jar | head -n 1)
 
-                // 실행
-                sh "ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} 'cd ${REMOTE_DIR} && ./run.sh'"
+                    if [ -z "\$LATEST_JAR" ]; then
+                        echo "No JAR file found!"
+                        exit 1
+                    fi
+
+                    # JAR와 run.sh 전송
+                    scp -i ${SSH_KEY} "\$LATEST_JAR" ${RUN_SCRIPT} ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/
+
+                    # 실행 권한 부여
+                    ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} 'chmod +x ${REMOTE_DIR}/${RUN_SCRIPT}'
+
+                    # run.sh 실행
+                    ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} 'bash ${REMOTE_DIR}/${RUN_SCRIPT}'
+
+                    # 전송 및 실행 확인
+                    ssh -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} 'ls -l ${REMOTE_DIR}/'
+                """
             }
         }
     }
