@@ -2,17 +2,18 @@ pipeline {
     agent any
 
     environment {
-        REMOTE_HOST = '172.18.121.6'
-        REMOTE_USER = 'root'
-        REMOTE_DIR  = '/root/deploy'
-        SSH_KEY     = '/var/lib/jenkins/.ssh/id_rsa'  // Jenkins 홈 기준 키
-        JAR_FILE    = 'build/libs/myapp.jar'
+        REMOTE_HOST = '172.18.121.6'              // 타겟 서버 IP
+        REMOTE_USER = 'root'                      // SSH 접속 사용자
+        REMOTE_DIR  = '/root/deploy'              // 배포 디렉터리
+        SSH_KEY     = '/var/lib/jenkins/.ssh/id_rsa' // Jenkins 서버의 SSH 키 경로
+        JAR_FILE    = 'build/libs/*.jar'          // 빌드된 JAR 파일 (와일드카드 사용)
     }
 
     stages {
 
         stage('Build') {
             steps {
+                echo 'Building Spring Boot JAR'
                 sh 'chmod +x ./gradlew'
                 sh './gradlew clean build'
             }
