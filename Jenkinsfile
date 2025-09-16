@@ -36,11 +36,8 @@ pipeline {
                 echo 'Starting Spring Boot application on remote server'
                 sh """
                 ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} "
-                # 이전 실행 프로세스 종료
                 pkill -f 'java.*/root/deploy' || true
-
-                # JAR 실행 - SSH 종료에도 유지되도록 setsid 사용
-                setsid java -jar ${REMOTE_DIR}/jenkins-practice-0.0.1-SNAPSHOT.jar --server.port=${APP_PORT} > ${REMOTE_DIR}/app.log 2>&1 &
+                nohup java -jar ${REMOTE_DIR}/jenkins-practice-0.0.1-SNAPSHOT.jar --server.port=${APP_PORT} > ${REMOTE_DIR}/app.log 2>&1 &
                 "
                 """
             }
