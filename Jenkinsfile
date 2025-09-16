@@ -6,7 +6,7 @@ pipeline {
         REMOTE_USER = 'root'
         REMOTE_DIR  = '/root/deploy'
         SSH_KEY     = '/var/lib/jenkins/.ssh/id_rsa'
-        JAR_FILE    = 'build/libs/*.jar'
+        JAR_FILE    = 'build/libs/jenkins-practice-0.0.1-SNAPSHOT.jar'
         APP_PORT    = '8081'
     }
 
@@ -22,7 +22,7 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                echo 'Deploying JAR to remote server via SSH'
+                echo 'Deploying JAR to remote server'
                 sh """
                 ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} "mkdir -p ${REMOTE_DIR} && chmod 755 ${REMOTE_DIR}"
                 scp -o StrictHostKeyChecking=no -i ${SSH_KEY} ${JAR_FILE} ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/
@@ -36,11 +36,11 @@ pipeline {
                 echo 'Starting Spring Boot application on remote server'
                 sh """
                 ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ${REMOTE_USER}@${REMOTE_HOST} "
-                # 이전 프로세스 종료
-                pkill -f 'java.*${REMOTE_DIR}' || true
+                # 이전 실행 프로세스 종료
+                pkill -f 'java.*/root/deploy' || true
 
-                # JAR 실행 (백그라운드, 로그 저장)
-                nohup java -jar ${REMOTE_DIR}/*.jar --server.port=${APP_PORT} > ${REMOTE_DIR}/app.log 2>&1 &
+                # JAR 실행 - SSH 종료에도 유지되도록 setsid 사용
+                setsid java -jar ${REMOTE_DIR}/jenkins-practice-0.0.1-SNAPSHOT.jar --server.port=${APP_PORT} > ${REMOTE_DIR}/app.log 2>&1 &
                 "
                 """
             }
